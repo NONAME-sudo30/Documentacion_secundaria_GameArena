@@ -1,0 +1,219 @@
+
+## 1 · Tu código, línea a línea
+Cuatro funciones seguidas de mi `app.js`, todas cortas. La numeración de líneas empieza en 1 dentro de cada función.
+---
+
+### Función 1: `pintarVideojuegos(lista)`
+
+`app.js`
+
+```js
+1  const pintarVideojuegos = (lista) => pintar("tabla-videojuegos", lista, (v) => [v.id, v.nombre, v.genero]);
+```
+
+| Línea | Código | Qué hace (con mis palabras) |
+|-------|--------|-----------------------------|
+| 1 | `const pintarVideojuegos = (lista) => pintar(...)` | Dibuja una lista de videojuegos en la tabla `tabla-videojuegos`. Indica qué columnas quiero (id, nombre y género) y no añade botones Editar y Eliminar, porque los videojuegos solo se crean y se consultan. |
+
+**Resumen en tres respuestas**
+
+- **Petición:** ninguna; solo dibuja datos que ya tiene.
+- **Qué recibe:** un array de videojuegos que le pasa quien la llama.
+- **Qué cambia en la página:** las filas de `tabla-videojuegos` se sustituyen por una fila por videojuego.
+
+---
+
+### Función 2: `cargarVideojuegos()`
+
+`app.js`
+
+```js
+1  async function cargarVideojuegos() {
+2      const lista = await peticion("/videojuegos");
+3      pintarVideojuegos(lista);
+4      llenarSelect($("t-videojuego"), lista, (v) => v.nombre);
+5  }
+```
+
+| Línea | Código | Qué hace (con mis palabras) |
+|-------|--------|-----------------------------|
+| 1 | `async function cargarVideojuegos() {` | Declara la función que carga los videojuegos. Es `async` porque tiene que esperar al servidor. |
+| 2 | `const lista = await peticion("/videojuegos");` | Hace un `GET /videojuegos` (GET es el método por defecto de `peticion`) y espera a recibir la lista, ya convertida de JSON a array. |
+| 3 | `pintarVideojuegos(lista);` | Dibuja esa lista en la tabla de videojuegos. |
+| 4 | `llenarSelect($("t-videojuego"), lista, (v) => v.nombre);` | Usa la misma lista para rellenar el desplegable de videojuegos del formulario de torneos. |
+| 5 | `}` | Cierra la función. |
+
+**Resumen en tres respuestas**
+
+- **Petición:** `GET /videojuegos`.
+- **Qué recibe:** un array JSON con todos los videojuegos (id, nombre, género).
+- **Qué cambia en la página:** se rellena `tabla-videojuegos` y las opciones del desplegable `t-videojuego`.
+
+---
+
+### Función 3: `pintarTorneos(lista)`
+
+`app.js`
+
+```js
+1  const pintarTorneos = (lista) =>
+2      pintar("tabla-torneos", lista, (t) => [t.id, t.nombre, t.fecha, t.videojuego?.nombre, t.estado], true);
+```
+
+| Línea | Código | Qué hace (con mis palabras) |
+|-------|--------|-----------------------------|
+| 1 | `const pintarTorneos = (lista) =>` | Declara la función que dibuja torneos y recibe la lista ya cargada. |
+| 2 | `pintar("tabla-torneos", lista, (t) => [...], true);` | Rellena `tabla-torneos` con id, nombre, fecha, nombre del videojuego y estado. El `?.` evita un error si un torneo no tiene videojuego. El `true` final añade a cada fila los botones Editar y Eliminar. |
+
+**Resumen en tres respuestas**
+
+- **Petición:** ninguna.
+- **Qué recibe:** un array de torneos.
+- **Qué cambia en la página:** se reemplazan las filas de `tabla-torneos`, cada una con sus botones Editar y Eliminar.
+
+---
+
+### Función 4: `cargarTorneos()`
+
+`app.js`
+
+```js
+1  async function cargarTorneos() {
+2      const lista = await peticion("/torneos");
+3      pintarTorneos(lista);
+4      llenarSelect($("p-torneo"), lista, (t) => t.nombre);
+5  }
+```
+
+| Línea | Código | Qué hace (con mis palabras) |
+|-------|--------|-----------------------------|
+| 1 | `async function cargarTorneos() {` | Declara la función que carga los torneos; es `async` porque espera al servidor. |
+| 2 | `const lista = await peticion("/torneos");` | Hace un `GET /torneos` y espera la lista de torneos ya convertida en array. |
+| 3 | `pintarTorneos(lista);` | Dibuja los torneos en la tabla. |
+| 4 | `llenarSelect($("p-torneo"), lista, (t) => t.nombre);` | Rellena el desplegable de torneos del formulario de participaciones con los mismos datos. |
+| 5 | `}` | Cierra la función. |
+
+**Resumen en tres respuestas**
+
+- **Petición:** `GET /torneos`.
+- **Qué recibe:** un array JSON con todos los torneos.
+- **Qué cambia en la página:** se rellena `tabla-torneos` y el desplegable `p-torneo`.
+
+---
+
+## 2 · Tres eventos: del HTML al JS y vuelta al HTML
+
+> ⚠️ No tengo tu `index.html`: los fragmentos de HTML y las respuestas del servidor están **deducidos de los ids y rutas de tu `app.js`**. Sustitúyelos por los reales (HTML desde tu archivo; respuestas desde F12 → Red).
+
+---
+
+### Evento 1: filtrar torneos por estado (`submit`, con `fetch`)
+
+**1 · En el HTML:**
+
+```html
+<form id="form-filtro-torneo">
+  <select id="t-filtro"> <option>ABIERTO</option> <option>CERRADO</option> ... </select>
+  <button type="submit">Filtrar</button>
+  <button type="button" id="t-todos">Ver todos</button>
+</form>
+<tbody id="tabla-torneos"> ...todos los torneos... </tbody>
+```
+
+Al pulsar Filtrar se dispara el evento `submit` del formulario, que escucha `enviar("form-filtro-torneo", ...)` de `app.js`.
+
+**2 · En el JS:** salta el manejador de `enviar`, que primero evita que la página se recargue y luego ejecuta la acción. La acción coge el valor elegido en `t-filtro`, lo añade a la ruta y hace la petición. `comoLista` convierte el resultado en array aunque llegue un solo elemento, y `pintarTorneos` (función 3) lo dibuja.
+
+**3 · En el servidor:** `GET /torneos/estado/ABIERTO`
+
+```json
+[ { "id": 5, "nombre": "Copa Primavera", "fecha": "2026-03-20", "estado": "ABIERTO",
+    "videojuego": { "id": 3, "nombre": "Zelda" } } ]
+```
+
+_(ejemplo: sustituye por la respuesta real de F12 → Red)_
+
+**4 · De vuelta al HTML:** la tabla se queda solo con los torneos de ese estado.
+
+```html
+<tbody id="tabla-torneos">
+  <tr><td>5</td><td>Copa Primavera</td><td>2026-03-20</td><td>Zelda</td><td>ABIERTO</td> ... </tr>
+</tbody>
+```
+
+---
+
+### Evento 2: pulsar «Ver todos» en torneos (`click`, con `fetch`)
+
+**1 · En el HTML:** el botón `t-todos` con el evento `click`.
+
+```html
+<button type="button" id="t-todos">Ver todos</button>
+```
+
+`alPulsar("t-todos", cargarTorneos)` de `app.js` engancha el `click` de este botón con la función.
+
+**2 · En el JS:** al hacer clic se ejecuta `cargarTorneos()` (función 4, explicada en la parte 1). `alPulsar` la llama y ignora los errores, porque el aviso ya lo muestra `peticion()`.
+
+**3 · En el servidor:** `GET /torneos`
+
+```json
+[ { "id": 5, "nombre": "Copa Primavera", "estado": "ABIERTO", ... },
+  { "id": 6, "nombre": "Copa Otoño", "estado": "CERRADO", ... } ]
+```
+
+_(ejemplo: sustituye por la respuesta real)_
+
+**4 · De vuelta al HTML:** la tabla vuelve a mostrar todos los torneos y se actualiza el desplegable de torneos de participaciones.
+
+---
+
+### Evento 3: crear un videojuego (`submit`, con `fetch`: POST)
+
+**1 · En el HTML:**
+
+```html
+<form id="form-videojuego">
+  <input id="vj-nombre" required>
+  <input id="vj-genero" required>
+  <button type="submit">Crear videojuego</button>
+</form>
+<tbody id="tabla-videojuegos"> ... </tbody>
+<p id="aviso"></p>
+```
+
+**2 · En el JS:** el manejador de `enviar("form-videojuego", ...)` hace esto:
+
+```js
+enviar("form-videojuego", async () => {
+    await peticion("/videojuegos", "POST", { nombre: $("vj-nombre").value.trim(), genero: $("vj-genero").value.trim() });
+    $("form-videojuego").reset();
+    await cargarVideojuegos();
+    avisar("Videojuego creado.", "ok");
+});
+```
+
+Lee los dos campos, quita los espacios sobrantes, los manda por `POST`, vacía el formulario, vuelve a cargar la lista con `cargarVideojuegos()` (función 2, explicada en la parte 1) y muestra el aviso verde.
+
+**3 · En el servidor:** `POST /videojuegos`
+
+Cuerpo enviado:
+
+```json
+{ "nombre": "Hollow Knight", "genero": "Metroidvania" }
+```
+
+Respuesta:
+
+```json
+{ "id": 8, "nombre": "Hollow Knight", "genero": "Metroidvania" }
+```
+
+_(ejemplo: sustituye por el estado y la respuesta reales de F12 → Red)_
+
+**4 · De vuelta al HTML:** aparece una fila nueva en la tabla, el formulario queda vacío y sale el aviso.
+
+```html
+<p id="aviso" class="ok">Videojuego creado.</p>
+<tr><td>8</td><td>Hollow Knight</td><td>Metroidvania</td></tr>
+```
